@@ -52,9 +52,10 @@ Two-step OTP authentication:
 │ Sess 2  │  │ Streaming tokens...  │        │
 │ Sess 3  │  └──────────────────────┘        │
 │         ├──────────────────────────────────┤
-│         │  [OpenAI ▾] [☑ RAG]             │
+│         │  [Chat▾] [OpenAI▾] [☑ RAG]      │
 │         │  [ message...        ] [Send]    │
-│         │  POST /chat (stream: true)       │
+│         │  Chat: POST /chat (streaming)    │
+│         │  Agent: POST /agent/chat (JSON)  │
 └─────────┴──────────────────────────────────┘
 
 ┌──────────────────────────────────┐
@@ -77,6 +78,7 @@ Two-step OTP authentication:
 - **Provider toggle** — switch between OpenAI and Local (Ollama) per request
 - **RAG toggle** — enable document-grounded responses
 - **Document upload** — paste text to ingest into the RAG pipeline
+- **Agent mode** — tool-calling agent with expandable tool call traces (OpenAI-only)
 - **Stop button** — cancel streaming via `AbortController`
 - **Error handling** — 401 redirect, inline error messages, rate limit display
 
@@ -140,6 +142,7 @@ src/
 │   ├── client.ts         # apiFetch() wrapper with Bearer auth + 401 handling
 │   ├── auth.ts           # requestOtp(), verifyOtp(), getMe()
 │   ├── chat.ts           # sendMessage(), streamMessage()
+│   ├── agent.ts          # agentChat() — tool-calling agent (non-streaming)
 │   ├── sessions.ts       # listSessions(), getSession(), deleteSession()
 │   └── documents.ts      # ingestDocument()
 ├── context/
@@ -172,6 +175,27 @@ npx tsc -b           # Type check
 npm run lint         # Lint with oxlint
 ```
 
+## Docker (Production)
+
+Multi-stage build: Node.js compiles the SPA → nginx serves static files and proxies API requests to the backend.
+
+```bash
+# Standalone
+docker build -t ai-chatbot-ui .
+docker run -p 3000:80 ai-chatbot-ui
+
+# With the full stack (from ai-chatbot-server/)
+docker compose up --build
+```
+
+In Docker, nginx proxies `/api/` and `/health` requests to the backend (`app:8000`), so the frontend uses relative URLs (no CORS needed).
+
+| File | Purpose |
+|------|---------|
+| `Dockerfile` | Multi-stage: `node:22-alpine` build → `nginx:alpine` serve (~25 MB) |
+| `nginx.conf` | SPA routing + API reverse proxy + SSE streaming support |
+| `.dockerignore` | Excludes node_modules, dist, .env, .git |
+
 ## API Endpoints Used
 
 | Endpoint | Purpose |
@@ -180,6 +204,7 @@ npm run lint         # Lint with oxlint
 | `POST /api/v1/auth/verify-otp` | Verify OTP, get JWT |
 | `GET /api/v1/auth/me` | Current user info |
 | `POST /api/v1/chat` | Chat (streaming SSE or JSON) |
+| `POST /api/v1/agent/chat` | Agent chat with tool calling |
 | `GET /api/v1/sessions` | List conversation sessions |
 | `GET /api/v1/sessions/{id}` | Get session with messages |
 | `DELETE /api/v1/sessions/{id}` | Delete a session |

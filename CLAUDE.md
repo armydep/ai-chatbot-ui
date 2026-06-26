@@ -27,11 +27,12 @@ src/
 │   ├── client.ts         # apiFetch() wrapper with Bearer auth + 401 handling
 │   ├── auth.ts           # requestOtp(), verifyOtp(), getMe()
 │   ├── chat.ts           # sendMessage(), streamMessage()
+│   ├── agent.ts          # agentChat() — tool-calling agent (non-streaming)
 │   ├── sessions.ts       # listSessions(), getSession(), deleteSession()
 │   └── documents.ts      # ingestDocument()
 ├── context/
 │   ├── AuthContext.tsx    # JWT storage, login/logout
-│   └── ChatContext.tsx    # Messages, sessions, streaming, provider, RAG state
+│   └── ChatContext.tsx    # Messages, sessions, streaming, provider, RAG, mode state
 ├── pages/
 │   ├── LoginPage.tsx      # OTP email → code → JWT
 │   └── ChatPage.tsx       # Layout: sidebar + chat + header
@@ -65,6 +66,7 @@ The backend must be running at `VITE_API_BASE_URL` with:
 - CORS allowing `http://localhost:3000`
 - Auth endpoints: `/api/v1/auth/request-otp`, `/api/v1/auth/verify-otp`, `/api/v1/auth/me`
 - Chat endpoint: `POST /api/v1/chat` (streaming + non-streaming)
+- Agent endpoint: `POST /api/v1/agent/chat` (tool-calling, non-streaming)
 - Sessions: `GET/DELETE /api/v1/sessions`
 - Documents: `POST /api/v1/documents`
 
@@ -76,6 +78,7 @@ The backend must be running at `VITE_API_BASE_URL` with:
 - State managed via React Context + useReducer
 - Styling via Tailwind utility classes — no CSS files per component
 - JWT stored in memory (lost on refresh) — no localStorage
+- Agent mode is OpenAI-only (no provider toggle in agent mode)
 
 ## Do Not
 

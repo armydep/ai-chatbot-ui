@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useReducer } from "rea
 import type { ReactNode } from "react";
 import type { ChatMessage, SessionResponse } from "../types/api";
 import { streamMessage } from "../api/chat";
+import { agentChat } from "../api/agent";
 import { deleteSession as apiDeleteSession, getSession, listSessions } from "../api/sessions";
 
 interface ChatState {
@@ -13,6 +14,7 @@ interface ChatState {
   error: string | null;
   provider: "openai" | "local";
   ragEnabled: boolean;
+  mode: "chat" | "agent";
 }
 
 type ChatAction =
@@ -26,6 +28,7 @@ type ChatAction =
   | { type: "SET_ERROR"; error: string | null }
   | { type: "SET_PROVIDER"; provider: "openai" | "local" }
   | { type: "SET_RAG"; enabled: boolean }
+  | { type: "SET_MODE"; mode: "chat" | "agent" }
   | { type: "NEW_CHAT" };
 
 const initialState: ChatState = {
@@ -37,6 +40,7 @@ const initialState: ChatState = {
   error: null,
   provider: "openai",
   ragEnabled: false,
+  mode: "chat",
 };
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
@@ -67,6 +71,8 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return { ...state, provider: action.provider };
     case "SET_RAG":
       return { ...state, ragEnabled: action.enabled };
+    case "SET_MODE":
+      return { ...state, mode: action.mode };
     case "NEW_CHAT":
       return {
         ...state,
@@ -87,6 +93,7 @@ interface ChatContextValue extends ChatState {
   removeSession: (id: string) => Promise<void>;
   setProvider: (provider: "openai" | "local") => void;
   setRagEnabled: (enabled: boolean) => void;
+  setMode: (mode: "chat" | "agent") => void;
   clearError: () => void;
   abortStream: () => void;
 }
@@ -110,9 +117,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const send = useCallback(
+  const sendChat = useCallback(
     async (content: string) => {
-      dispatch({ type: "SET_ERROR", error: null });
       dispatch({ type: "ADD_MESSAGE", message: { role: "user", content } });
 
       const allMessages: ChatMessage[] = [
@@ -120,7 +126,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         { role: "user" as const, content },
       ];
 
-      // Streaming path
       dispatch({ type: "SET_STREAMING", streaming: true });
       dispatch({ type: "ADD_MESSAGE", message: { role: "assistant", content: "" } });
 
@@ -188,6 +193,49 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [state.messages, state.currentSessionId, state.provider, state.ragEnabled, loadSessions],
   );
 
+  const sendAgent = useCallback(
+    async (content: string) => {
+      dispatch({ type: "ADD_MESSAGE", message: { role: "user", content } });
+      dispatch({ type: "SET_LOADING", loading: true });
+
+      try {
+        const response = await agentChat({
+          message: content,
+          session_id: state.currentSessionId,
+        });
+        dispatch({
+          type: "ADD_MESSAGE",
+          message: {
+            role: "assistant",
+            content: response.answer,
+            toolCalls: response.tool_calls,
+          },
+        });
+      } catch (err) {
+        dispatch({
+          type: "SET_ERROR",
+          error: err instanceof Error ? err.message : "Failed to send message",
+        });
+      } finally {
+        dispatch({ type: "SET_LOADING", loading: false });
+        loadSessions();
+      }
+    },
+    [state.currentSessionId, loadSessions],
+  );
+
+  const send = useCallback(
+    async (content: string) => {
+      dispatch({ type: "SET_ERROR", error: null });
+      if (state.mode === "agent") {
+        await sendAgent(content);
+      } else {
+        await sendChat(content);
+      }
+    },
+    [state.mode, sendChat, sendAgent],
+  );
+
   const switchSession = useCallback(async (id: string) => {
     dispatch({ type: "SET_LOADING", loading: true });
     try {
@@ -237,6 +285,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "SET_RAG", enabled });
   }, []);
 
+  const setMode = useCallback((mode: "chat" | "agent") => {
+    dispatch({ type: "SET_MODE", mode });
+  }, []);
+
   const clearError = useCallback(() => {
     dispatch({ type: "SET_ERROR", error: null });
   }, []);
@@ -255,10 +307,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       removeSession,
       setProvider,
       setRagEnabled,
+      setMode,
       clearError,
       abortStream,
     }),
-    [state, send, loadSessions, switchSession, newChat, removeSession, setProvider, setRagEnabled, clearError, abortStream],
+    [state, send, loadSessions, switchSession, newChat, removeSession, setProvider, setRagEnabled, setMode, clearError, abortStream],
   );
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

@@ -13,10 +13,12 @@ export default function ChatPage() {
     messages,
     sessions,
     currentSessionId,
+    isLoading,
     isStreaming,
     error,
     provider,
     ragEnabled,
+    mode,
     send,
     loadSessions,
     switchSession,
@@ -24,6 +26,7 @@ export default function ChatPage() {
     removeSession,
     setProvider,
     setRagEnabled,
+    setMode,
     clearError,
     abortStream,
   } = useChat();
@@ -71,16 +74,25 @@ export default function ChatPage() {
           </div>
         )}
 
+        {isLoading && mode === "agent" && (
+          <div className="mx-4 mt-2 flex items-center gap-2 rounded bg-amber-50 px-3 py-2 text-sm text-amber-700">
+            <span className="animate-pulse">Agent is thinking...</span>
+          </div>
+        )}
+
         <ChatMessages messages={messages} />
 
         <ChatInput
           onSend={send}
           isStreaming={isStreaming}
+          isLoading={isLoading}
           onStop={abortStream}
           provider={provider}
           onProviderChange={setProvider}
           ragEnabled={ragEnabled}
           onRagToggle={setRagEnabled}
+          mode={mode}
+          onModeChange={setMode}
         />
       </div>
 

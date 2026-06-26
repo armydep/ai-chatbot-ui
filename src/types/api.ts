@@ -1,6 +1,13 @@
+export interface ToolCallRecord {
+  tool_name: string;
+  arguments: Record<string, unknown>;
+  result: string;
+}
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
+  toolCalls?: ToolCallRecord[];
 }
 
 export interface ChatRequest {
@@ -72,6 +79,21 @@ export interface UserMeResponse {
   email: string;
   role: string;
   auth_method: string;
+}
+
+export interface AgentChatRequest {
+  message: string;
+  model?: string;
+  temperature?: number;
+  tools?: string[];
+  session_id?: string | null;
+}
+
+export interface AgentChatResponse {
+  answer: string;
+  tool_calls: ToolCallRecord[];
+  model: string;
+  session_id: string | null;
 }
 
 export interface ApiError {
