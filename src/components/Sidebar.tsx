@@ -50,6 +50,7 @@ export default function Sidebar({
                 }}
                 className="ml-2 hidden text-gray-400 hover:text-red-500 group-hover:block"
                 title="Delete"
+                aria-label="Delete conversation"
               >
                 &times;
               </button>

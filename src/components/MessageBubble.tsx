@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { ChatMessage, ToolCallRecord } from "../types/api";
 
 interface Props {
@@ -12,6 +12,8 @@ function ToolCallCard({ call }: { call: ToolCallRecord }) {
     <div className="mt-2 rounded border border-gray-200 bg-gray-50 text-xs">
       <button
         onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
+        aria-label={`Toggle ${call.tool_name} details`}
         className="flex w-full items-center justify-between px-3 py-1.5 text-left font-medium text-gray-700 hover:bg-gray-100"
       >
         <span>{call.tool_name}</span>
@@ -37,7 +39,7 @@ function ToolCallCard({ call }: { call: ToolCallRecord }) {
   );
 }
 
-export default function MessageBubble({ message }: Props) {
+function MessageBubble({ message }: Props) {
   const isUser = message.role === "user";
 
   return (
@@ -58,7 +60,7 @@ export default function MessageBubble({ message }: Props) {
               Tool calls ({message.toolCalls.length})
             </span>
             {message.toolCalls.map((call, i) => (
-              <ToolCallCard key={i} call={call} />
+              <ToolCallCard key={`${call.tool_name}-${i}`} call={call} />
             ))}
           </div>
         )}
@@ -66,3 +68,5 @@ export default function MessageBubble({ message }: Props) {
     </div>
   );
 }
+
+export default memo(MessageBubble);

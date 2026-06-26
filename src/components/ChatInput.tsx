@@ -49,6 +49,7 @@ export default function ChatInput({
         <select
           value={mode}
           onChange={(e) => onModeChange(e.target.value as "chat" | "agent")}
+          aria-label="Chat mode"
           className="rounded border border-gray-300 px-2 py-1 text-xs font-medium"
         >
           <option value="chat">Chat</option>
@@ -60,6 +61,7 @@ export default function ChatInput({
             <select
               value={provider}
               onChange={(e) => onProviderChange(e.target.value as "openai" | "local")}
+              aria-label="LLM provider"
               className="rounded border border-gray-300 px-2 py-1 text-xs"
             >
               <option value="openai">OpenAI</option>

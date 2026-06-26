@@ -57,10 +57,11 @@ export default function LoginPage() {
 
         {step === "email" ? (
           <form onSubmit={handleRequestOtp}>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700">
               Email
             </label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -81,10 +82,11 @@ export default function LoginPage() {
             <p className="mb-4 text-sm text-gray-600">
               Code sent to <span className="font-medium">{email}</span>
             </p>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="otp-code" className="mb-1 block text-sm font-medium text-gray-700">
               6-digit code
             </label>
             <input
+              id="otp-code"
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}

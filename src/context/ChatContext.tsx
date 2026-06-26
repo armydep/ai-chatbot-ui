@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useReducer } from "react";
+import { createContext, useCallback, useContext, useMemo, useReducer, useRef } from "react";
 import type { ReactNode } from "react";
 import type { ChatMessage, SessionResponse } from "../types/api";
 import { streamMessage } from "../api/chat";
@@ -85,6 +85,54 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
   }
 }
 
+async function readSSEStream(
+  response: Response,
+  signal: AbortSignal,
+  onToken: (accumulated: string) => void,
+  onError: (error: string) => void,
+) {
+  const body = response.body;
+  if (!body) throw new Error("Response body is null");
+
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let accumulated = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done || signal.aborted) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6);
+        if (data === "[DONE]") continue;
+
+        try {
+          const parsed = JSON.parse(data) as { content?: string; error?: string };
+          if (parsed.error) {
+            onError(parsed.error);
+            return;
+          }
+          if (parsed.content) {
+            accumulated += parsed.content;
+            onToken(accumulated);
+          }
+        } catch {
+          // Skip malformed SSE chunks
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 interface ChatContextValue extends ChatState {
   send: (content: string) => Promise<void>;
   loadSessions: () => Promise<void>;
@@ -101,12 +149,13 @@ interface ChatContextValue extends ChatState {
 const ChatContext = createContext<ChatContextValue | null>(null);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(chatReducer, {
-    ...initialState,
-    currentSessionId: crypto.randomUUID(),
-  });
+  const [state, dispatch] = useReducer(
+    chatReducer,
+    initialState,
+    (init) => ({ ...init, currentSessionId: crypto.randomUUID() }),
+  );
 
-  const abortControllerRef = { current: null as AbortController | null };
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const loadSessions = useCallback(async () => {
     try {
@@ -140,45 +189,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           use_rag: state.ragEnabled,
         }, controller.signal);
 
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let accumulated = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          if (controller.signal.aborted) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop()!;
-
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const data = line.slice(6);
-
-            if (data === "[DONE]") continue;
-
-            try {
-              const parsed = JSON.parse(data) as { content?: string; error?: string };
-              if (parsed.error) {
-                dispatch({ type: "SET_ERROR", error: parsed.error });
-                break;
-              }
-              if (parsed.content) {
-                accumulated += parsed.content;
-                dispatch({ type: "UPDATE_LAST_ASSISTANT", content: accumulated });
-              }
-            } catch {
-              // Skip malformed chunks
-            }
-          }
-        }
+        await readSSEStream(
+          response,
+          controller.signal,
+          (accumulated) => dispatch({ type: "UPDATE_LAST_ASSISTANT", content: accumulated }),
+          (error) => dispatch({ type: "SET_ERROR", error }),
+        );
       } catch (err) {
-        if (controller.signal.aborted) {
-          // User cancelled — not an error
-        } else {
+        if (!controller.signal.aborted) {
           dispatch({
             type: "SET_ERROR",
             error: err instanceof Error ? err.message : "Failed to send message",
