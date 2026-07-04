@@ -96,6 +96,36 @@ export interface AgentChatResponse {
   session_id: string | null;
 }
 
+export interface MessageSearchRequest {
+  query: string;
+  role?: "user" | "assistant" | null;
+  date_from?: string | null;
+  date_to?: string | null;
+  limit?: number;
+  offset?: number;
+}
+
+export interface SearchMatch {
+  id: string;
+  match_type: "message" | "session_title";
+  role: string | null;
+  snippets: string[];
+  score: number;
+  created_at: string;
+}
+
+export interface SessionSearchGroup {
+  session_id: string;
+  session_title: string | null;
+  matches: SearchMatch[];
+}
+
+export interface MessageSearchResponse {
+  query: string;
+  total: number;
+  groups: SessionSearchGroup[];
+}
+
 export interface ApiError {
   detail: string;
 }

@@ -1,4 +1,5 @@
 import type { SessionResponse } from "../types/api";
+import SearchPanel from "./SearchPanel";
 
 interface Props {
   sessions: SessionResponse[];
@@ -26,7 +27,7 @@ export default function Sidebar({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <SearchPanel onSelect={onSelect}>
         {sessions.length === 0 ? (
           <p className="p-3 text-center text-xs text-gray-400">
             No conversations yet
@@ -57,7 +58,7 @@ export default function Sidebar({
             </div>
           ))
         )}
-      </div>
+      </SearchPanel>
     </div>
   );
 }
