@@ -4,6 +4,7 @@ import type { ChatMessage, SessionResponse } from "../types/api";
 import { streamMessage } from "../api/chat";
 import { agentChat } from "../api/agent";
 import { deleteSession as apiDeleteSession, getSession, listSessions } from "../api/sessions";
+import { uuid } from "../lib/uuid";
 
 interface ChatState {
   messages: ChatMessage[];
@@ -77,7 +78,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return {
         ...state,
         messages: [],
-        currentSessionId: crypto.randomUUID(),
+        currentSessionId: uuid(),
         error: null,
       };
     default:
@@ -152,7 +153,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(
     chatReducer,
     initialState,
-    (init) => ({ ...init, currentSessionId: crypto.randomUUID() }),
+    (init) => ({ ...init, currentSessionId: uuid() }),
   );
 
   const abortControllerRef = useRef<AbortController | null>(null);
