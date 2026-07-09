@@ -9,6 +9,7 @@ import DocumentUpload from "../components/DocumentUpload";
 export default function ChatPage() {
   const { user, logout } = useAuth();
   const [showDocUpload, setShowDocUpload] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const {
     messages,
     sessions,
@@ -36,29 +37,66 @@ export default function ChatPage() {
   }, [loadSessions]);
 
   return (
-    <div className="flex h-screen bg-white">
-      <Sidebar
-        sessions={sessions}
-        currentSessionId={currentSessionId}
-        onSelect={switchSession}
-        onNew={newChat}
-        onDelete={removeSession}
-      />
+    <div className="flex min-h-[100svh] overflow-hidden bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      {/* Backdrop — only on mobile when the drawer is open */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/30 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
-      <div className="flex flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-gray-200 px-4 py-2">
-          <h1 className="text-sm font-medium text-gray-700">AI Chatbot</h1>
-          <div className="flex items-center gap-3">
+      {/* Sidebar — static on desktop, slide-over drawer on mobile */}
+      <div
+        className={`fixed inset-y-0 left-0 z-40 transform transition-transform duration-200 ease-in-out md:static md:z-auto md:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <Sidebar
+          sessions={sessions}
+          currentSessionId={currentSessionId}
+          onSelect={(id) => {
+            switchSession(id);
+            setSidebarOpen(false);
+          }}
+          onNew={() => {
+            newChat();
+            setSidebarOpen(false);
+          }}
+          onDelete={removeSession}
+        />
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-20 flex flex-col gap-2 border-b border-gray-200 bg-white px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="-ml-1 rounded p-1 text-gray-600 hover:bg-gray-100 md:hidden"
+              aria-label="Open conversations menu"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+            <h1 className="truncate text-sm font-medium text-gray-700">AI Chatbot</h1>
+          </div>
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
             <button
               onClick={() => setShowDocUpload(true)}
-              className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+              className="shrink-0 whitespace-nowrap rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
             >
-              Upload Doc
+              Upload<span className="hidden sm:inline"> Doc</span>
             </button>
-            <span className="text-xs text-gray-400">{user?.email}</span>
+            <span className="hidden max-w-[40vw] truncate text-xs text-gray-400 sm:inline">
+              {user?.email}
+            </span>
             <button
               onClick={logout}
-              className="text-xs text-gray-500 hover:text-gray-700"
+              className="shrink-0 whitespace-nowrap text-xs text-gray-500 hover:text-gray-700"
             >
               Logout
             </button>

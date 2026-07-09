@@ -44,13 +44,13 @@ export default function ChatInput({
   }
 
   return (
-    <div className="border-t border-gray-200 bg-white p-4">
-      <div className="mb-2 flex items-center gap-3 text-xs">
+    <div className="border-t border-gray-200 bg-white p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:p-4">
+      <div className="mb-2 flex flex-col gap-2 text-xs sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
         <select
           value={mode}
           onChange={(e) => onModeChange(e.target.value as "chat" | "agent")}
           aria-label="Chat mode"
-          className="rounded border border-gray-300 px-2 py-1 text-xs font-medium"
+          className="w-full min-w-0 rounded border border-gray-300 px-2 py-1 text-xs font-medium sm:w-auto"
         >
           <option value="chat">Chat</option>
           <option value="agent">Agent</option>
@@ -62,13 +62,13 @@ export default function ChatInput({
               value={provider}
               onChange={(e) => onProviderChange(e.target.value as "openai" | "local")}
               aria-label="LLM provider"
-              className="rounded border border-gray-300 px-2 py-1 text-xs"
+              className="w-full min-w-0 rounded border border-gray-300 px-2 py-1 text-xs sm:w-auto"
             >
               <option value="openai">OpenAI</option>
               <option value="local">Local (Ollama)</option>
             </select>
 
-            <label className="flex items-center gap-1 cursor-pointer">
+            <label className="flex items-center gap-1 self-start cursor-pointer sm:self-auto">
               <input
                 type="checkbox"
                 checked={ragEnabled}
@@ -81,20 +81,20 @@ export default function ChatInput({
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={mode === "agent" ? "Ask the agent..." : "Type a message..."}
           rows={1}
-          className="flex-1 resize-none rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="min-h-11 w-full flex-1 resize-none rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:min-h-0"
         />
         {isStreaming ? (
           <button
             type="button"
             onClick={onStop}
-            className="rounded bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600"
+            className="w-full shrink-0 rounded bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600 sm:w-auto"
           >
             Stop
           </button>
@@ -102,7 +102,7 @@ export default function ChatInput({
           <button
             type="submit"
             disabled={!input.trim() || busy}
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="w-full shrink-0 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 sm:w-auto"
           >
             Send
           </button>

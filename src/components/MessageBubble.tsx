@@ -45,7 +45,7 @@ function MessageBubble({ message }: Props) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-3`}>
       <div
-        className={`max-w-[75%] rounded-lg px-4 py-2 text-sm whitespace-pre-wrap ${
+        className={`max-w-[85%] rounded-lg px-4 py-2 text-sm whitespace-pre-wrap sm:max-w-[75%] ${
           isUser
             ? "bg-blue-600 text-white"
             : "bg-gray-100 text-gray-900"
