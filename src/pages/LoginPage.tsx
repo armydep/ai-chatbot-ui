@@ -32,8 +32,10 @@ export default function LoginPage() {
     setError("");
     setIsSubmitting(true);
     try {
-      const { access_token } = await verifyOtp({ email, code });
-      await login(access_token);
+      // The backend sets the session cookie on this response; login() then
+      // fetches /auth/me to populate local user state.
+      await verifyOtp({ email, code });
+      await login();
       navigate("/chat", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to verify OTP");

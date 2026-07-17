@@ -31,7 +31,7 @@ src/
 │   ├── sessions.ts       # listSessions(), getSession(), deleteSession()
 │   └── documents.ts      # ingestDocument()
 ├── context/
-│   ├── AuthContext.tsx    # JWT storage, login/logout
+│   ├── AuthContext.tsx    # Session state (httpOnly cookie, not JS-readable), login/logout
 │   └── ChatContext.tsx    # Messages, sessions, streaming, provider, RAG, mode state
 ├── pages/
 │   ├── LoginPage.tsx      # OTP email → code → JWT
@@ -77,11 +77,12 @@ The backend must be running at `VITE_API_BASE_URL` with:
 - All API calls go through `apiFetch()` wrapper (never raw `fetch`)
 - State managed via React Context + useReducer
 - Styling via Tailwind utility classes — no CSS files per component
-- JWT stored in memory (lost on refresh) — no localStorage
+- Session lives in an httpOnly cookie set by the backend on `POST /auth/verify-otp` — not localStorage, not JS-readable state. Survives a page reload; `AuthContext` re-derives `isAuthenticated` on mount by calling `GET /auth/me`, not by reading a stored token
+- All fetch wrappers (`apiFetch`, `apiStreamFetch`, `apiUpload`) send `credentials: "include"` so the cookie is attached automatically
 - Agent mode is OpenAI-only (no provider toggle in agent mode)
 
 ## Do Not
 
-- Never store JWT in localStorage (XSS risk, and in-memory is fine for learning)
+- Never store the session token in localStorage or component/context state — it lives only in the httpOnly cookie the backend manages (XSS-safe: no JS on this page can ever read it)
 - Never call `fetch()` directly from components — use `apiFetch()` or `apiStreamFetch()`
 - Never add CSS files per component — use Tailwind classes

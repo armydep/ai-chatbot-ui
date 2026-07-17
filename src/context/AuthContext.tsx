@@ -1,46 +1,70 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { UserMeResponse } from "../types/api";
 import { setAuthCallbacks } from "../api/client";
-import { getMe } from "../api/auth";
+import { getMe, logout as logoutRequest } from "../api/auth";
 
 interface AuthState {
-  token: string | null;
   user: UserMeResponse | null;
   isAuthenticated: boolean;
+  // True until the initial session check (GET /auth/me) resolves. Consumers
+  // like ProtectedRoute must wait for this before deciding to redirect —
+  // otherwise a page reload would bounce straight to /login before we've
+  // had a chance to ask the backend whether the session cookie is still valid.
+  isInitializing: boolean;
   isLoading: boolean;
-  login: (token: string) => Promise<void>;
-  logout: () => void;
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<UserMeResponse | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const tokenRef = useRef<string | null>(null);
 
-  const logout = useCallback(() => {
-    setToken(null);
+  const logout = useCallback(async () => {
     setUser(null);
-    tokenRef.current = null;
+    try {
+      // Clears the httpOnly cookie server-side — JS can't clear it itself.
+      await logoutRequest();
+    } catch {
+      // Best-effort: local state is already cleared regardless of network failure.
+    }
   }, []);
 
   useEffect(() => {
-    setAuthCallbacks(() => tokenRef.current, logout);
-  }, [logout]);
+    setAuthCallbacks(() => setUser(null));
+  }, []);
 
-  const login = useCallback(async (newToken: string) => {
-    setToken(newToken);
-    tokenRef.current = newToken;
+  // On mount (including a page reload), the browser may already be carrying
+  // a valid session cookie — ask the server who that is instead of assuming
+  // "logged out" just because there's no token in memory.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await getMe();
+        if (!cancelled) setUser(me);
+      } catch {
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setIsInitializing(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const login = useCallback(async () => {
     setIsLoading(true);
     try {
       const me = await getMe();
       setUser(me);
     } catch {
-      setToken(null);
-      tokenRef.current = null;
+      setUser(null);
       throw new Error("Failed to fetch user info");
     } finally {
       setIsLoading(false);
@@ -49,14 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      token,
       user,
-      isAuthenticated: token !== null,
+      isAuthenticated: user !== null,
+      isInitializing,
       isLoading,
       login,
       logout,
     }),
-    [token, user, isLoading, login, logout],
+    [user, isInitializing, isLoading, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

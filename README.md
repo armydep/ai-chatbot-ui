@@ -11,10 +11,11 @@ localhost:3000/*
        │
        ▼
  ProtectedRoute
-  ┌────┴────┐
-  │no JWT   │has JWT
-  ▼         ▼
-/login    /chat
+  ┌────────┴────────┐
+  │no session        │has session
+  │(GET /auth/me 401)│(GET /auth/me 200)
+  ▼                  ▼
+/login             /chat
 ```
 
 ### /login — LoginPage
@@ -32,7 +33,7 @@ Two-step OTP authentication:
 │  Step 2: Enter Code  │
 │  → POST /auth/       │
 │    verify-otp        │
-│  Returns JWT token   │
+│  Sets httpOnly cookie│
 │  → redirect to /chat │
 └──────────────────────┘
 ```
@@ -66,13 +67,13 @@ Two-step OTP authentication:
 ```
 
 **Navigation rules:**
-- Any URL without JWT → redirect to `/login`
-- 401 response from backend → clear token, redirect to `/login`
-- Logout button → clear token, redirect to `/login`
+- On load, `ProtectedRoute` calls `GET /auth/me`; no valid session cookie → redirect to `/login`
+- 401 response from backend → clear local user state, redirect to `/login`
+- Logout button → `POST /auth/logout` clears the session cookie server-side, redirect to `/login`
 
 ## Features
 
-- **OTP + JWT login** — email-based authentication
+- **OTP + JWT login** — email-based authentication, session held in an httpOnly cookie (survives page reload, not readable by JS)
 - **SSE streaming chat** — real-time token-by-token via `fetch` + `ReadableStream`
 - **Sessions sidebar** — list, create, switch, delete conversations
 - **Provider toggle** — switch between OpenAI and Local (Ollama) per request
