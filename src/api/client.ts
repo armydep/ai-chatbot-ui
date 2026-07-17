@@ -73,6 +73,37 @@ export async function apiStreamFetch(
   return response;
 }
 
+export async function apiUpload<T>(
+  path: string,
+  formData: FormData,
+): Promise<T> {
+  const token = tokenGetter?.();
+  // Deliberately do NOT set Content-Type — the browser sets it, including the
+  // multipart boundary, when the body is a FormData instance.
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+
+  if (response.status === 401) {
+    onUnauthorized?.();
+    throw new ApiError("Session expired. Please log in again.", 401);
+  }
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ detail: "Unknown error" }));
+    throw new ApiError(body.detail || `Request failed (${response.status})`, response.status);
+  }
+
+  return response.json() as Promise<T>;
+}
+
 export class ApiError extends Error {
   status: number;
 
