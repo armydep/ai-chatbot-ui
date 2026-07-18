@@ -81,6 +81,10 @@ export interface UserMeResponse {
   auth_method: string;
 }
 
+export interface LogoutResponse {
+  message: string;
+}
+
 export interface AgentChatRequest {
   message: string;
   model?: string;
